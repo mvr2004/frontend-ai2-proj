@@ -16,7 +16,7 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get(`/api/users/list?page=${currentPage}&limit=${usersPerPage}`);
+      const response = await axios.get(`https://backend-ai2-proj.onrender.com/user/list?page=${currentPage}&limit=${usersPerPage}`);
       setUsers(response.data.users);
       setTotalPages(response.data.totalPages);
     } catch (error) {
@@ -32,18 +32,26 @@ const UserManagement = () => {
   const handleClose = () => setShow(false);
 
   const handleSave = async () => {
-    if (currentUser.id) {
-      await axios.put(`/api/users/update/${currentUser.id}`, currentUser);
-    } else {
-      await axios.post('/api/users/add', currentUser);
+    try {
+      if (currentUser.id) {
+        await axios.put(`https://backend-ai2-proj.onrender.com/user/update/${currentUser.id}`, currentUser);
+      } else {
+        await axios.post('https://backend-ai2-proj.onrender.com/user/add', currentUser);
+      }
+      setShow(false);
+      fetchUsers();
+    } catch (error) {
+      console.error('Erro ao salvar utilizador', error);
     }
-    setShow(false);
-    fetchUsers();
   };
 
   const handleDelete = async (id) => {
-    await axios.delete(`/api/users/delete/${id}`);
-    fetchUsers();
+    try {
+      await axios.delete(`https://backend-ai2-proj.onrender.com/user/delete/${id}`);
+      fetchUsers();
+    } catch (error) {
+      console.error('Erro ao apagar utilizador', error);
+    }
   };
 
   const handleChange = (e) => {
