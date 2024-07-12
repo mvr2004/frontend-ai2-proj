@@ -9,7 +9,6 @@ import Navigation from './components/Navigation';
 const App = () => {
   return (
     <Router>
-      <Navigation />
       <div className="container mt-5">
         <Routes>
           <Route path="/login" element={<LoginPage />} />
