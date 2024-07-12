@@ -27,7 +27,7 @@ const Login = () => {
                         <div className="mb-5">
                             <div className="text-center mb-4">
                                 <a href="#!">
-                                    <img src="./assets/img/bsb-logo.svg" alt="BootstrapBrain Logo" width="175" height="57" />
+                                    <img src="./images/logo-softinsa.png" alt="Softinsa Logo" width="300"/>
                                 </a>
                             </div>
                             <h4 className="text-center mb-4">Bem-vindo ao Sistema de Administração!</h4>
