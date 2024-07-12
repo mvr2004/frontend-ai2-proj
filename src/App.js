@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
-import UserManagement from './pages/UserManagement';
+import UserManagement from './pages/listar_User.js';
 import Navigation from './components/Navigation';
 
 const App = () => {
