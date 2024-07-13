@@ -151,7 +151,18 @@ const UserManagement = () => {
         {currentUsers.map((user) => (
           <tr key={user.id}>
             <td>{user.id}</td>
-            <td>{user.nome}</td>
+            <td>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ overflow: 'hidden', height: '50px', width: '50px', borderRadius: '50%', marginRight: '10px' }}>
+                  <img
+                    src={user.fotoUrl || 'https://via.placeholder.com/150'}
+                    alt="Foto do usuário"
+                    style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
+                  />
+                </div>
+                {user.nome}
+              </div>
+            </td>
             <td>{user.email}</td>
             <td>{user.Centro ? user.Centro.centro : ''}</td>
             <td>
