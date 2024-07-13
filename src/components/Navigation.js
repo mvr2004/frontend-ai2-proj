@@ -1,7 +1,17 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Navigation = () => {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    // Remove o token JWT do localStorage
+    localStorage.removeItem('token');
+    localStorage.removeItem('idCentro');
+    // Redireciona para a página de login
+    navigate('/login');
+  };
+
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
       <div className="container-fluid">
@@ -10,7 +20,7 @@ const Navigation = () => {
           <span className="navbar-toggler-icon"></span>
         </button>
         <div className="collapse navbar-collapse" id="navbarNav">
-          <ul className="navbar-nav">
+          <ul className="navbar-nav me-auto">
             <li className="nav-item">
               <Link className="nav-link" to="/dashboard">Dashboard</Link>
             </li>
@@ -28,11 +38,12 @@ const Navigation = () => {
                 Reports
               </a>
               <ul className="dropdown-menu" aria-labelledby="navbarDropdown">
-                <li><a className="dropdown-item" href="/reportsPorResolver">To Solve</a></li>
-                <li><a className="dropdown-item" href="reportsResolvidos">Solved</a></li>
+                <li><Link className="dropdown-item" to="/reportsPorResolver">To Solve</Link></li>
+                <li><Link className="dropdown-item" to="/reportsResolvidos">Solved</Link></li>
               </ul>
             </li>
           </ul>
+          <button className="btn btn-outline-light" onClick={handleLogout}>Logout</button>
         </div>
       </div>
     </nav>
