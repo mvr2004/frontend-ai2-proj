@@ -6,18 +6,22 @@ import './UserManagement.css';
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [show, setShow] = useState(false);
+  const [showInterestModal, setShowInterestModal] = useState(false);
   const [currentUser, setCurrentUser] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [centrosDisponiveis, setCentrosDisponiveis] = useState([]);
+  const [areasDisponiveis, setAreasDisponiveis] = useState([]);
+  const [userAreas, setUserAreas] = useState([]);
   const usersPerPage = 10;
 
   useEffect(() => {
     if (!searchTerm && currentPage === 1) {
       fetchUsers(1);
       fetchCentros();
+      fetchAreas();
     } else {
       handleSearch();
     }
@@ -51,6 +55,24 @@ const UserManagement = () => {
     }
   };
 
+  const fetchAreas = async () => {
+    try {
+      const response = await axios.get('https://backend-ai2-proj.onrender.com/area/list');
+      setAreasDisponiveis(response.data);
+    } catch (error) {
+      console.error('Error fetching areas', error);
+    }
+  };
+
+  const fetchUserAreas = async (userId) => {
+    try {
+      const response = await axios.get(`https://backend-ai2-proj.onrender.com/area/list-user-areas/${userId}`);
+      setUserAreas(response.data.map(area => area.id));
+    } catch (error) {
+      console.error('Error fetching user areas', error);
+    }
+  };
+
   const handleSearch = async () => {
     try {
       setLoading(true);
@@ -68,20 +90,26 @@ const UserManagement = () => {
     setShow(true);
   };
 
+  const handleShowInterests = async (user) => {
+    setCurrentUser(user);
+    await fetchUserAreas(user.id);
+    setShowInterestModal(true);
+  };
+
   const handleClose = () => setShow(false);
+  const handleCloseInterests = () => setShowInterestModal(false);
 
   const handleSave = async () => {
     try {
       const { id, nome, email, password, centroId, Ativo, notas } = currentUser;
 
-      // Definindo Ativo como booleano explícito
       const userToSave = {
         id,
         nome,
         email,
         password,
         centroId,
-        Ativo: Ativo || false, // Garantindo que seja enviado como booleano explícito para o backend
+        Ativo: Ativo || false,
         notas
       };
 
@@ -94,6 +122,16 @@ const UserManagement = () => {
       fetchUsers(currentPage);
     } catch (error) {
       console.error('Error saving user', error);
+    }
+  };
+
+  const handleSaveInterests = async () => {
+    try {
+      const { id } = currentUser;
+      await axios.post('https://backend-ai2-proj.onrender.com/area/add-user-area', { userId: id, areaIds: userAreas });
+      setShowInterestModal(false);
+    } catch (error) {
+      console.error('Error saving user interests', error);
     }
   };
 
@@ -113,6 +151,14 @@ const UserManagement = () => {
 
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
+  };
+
+  const handleCheckboxChange = (areaId) => {
+    if (userAreas.includes(areaId)) {
+      setUserAreas(userAreas.filter(id => id !== areaId));
+    } else {
+      setUserAreas([...userAreas, areaId]);
+    }
   };
 
   const renderPagination = () => {
@@ -171,6 +217,13 @@ const UserManagement = () => {
                 className="button-spacing"
               >
                 Apagar
+              </Button>
+              <Button
+                variant="info"
+                onClick={() => handleShowInterests(user)}
+                className="button-spacing"
+              >
+                Áreas de Interesse
               </Button>
             </td>
           </tr>
@@ -288,6 +341,36 @@ const UserManagement = () => {
             Cancelar
           </Button>
           <Button variant="primary" onClick={handleSave}>
+            Salvar
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal show={showInterestModal} onHide={handleCloseInterests}>
+        <Modal.Header closeButton>
+          <Modal.Title>Atualizar Áreas de Interesse</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form>
+            <Form.Group controlId="formAreasInteresse">
+              <Form.Label>Áreas de Interesse</Form.Label>
+              {areasDisponiveis.map((area) => (
+                <Form.Check
+                  key={area.id}
+                  type="checkbox"
+                  label={area.nomeArea}
+                  checked={userAreas.includes(area.id)}
+                  onChange={() => handleCheckboxChange(area.id)}
+                />
+              ))}
+            </Form.Group>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleCloseInterests}>
+            Cancelar
+          </Button>
+          <Button variant="primary" onClick={handleSaveInterests}>
             Salvar
           </Button>
         </Modal.Footer>
