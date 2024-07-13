@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Pagination, Spinner, Dropdown } from 'react-bootstrap';
+import { Table, Button, Modal, Form, Pagination, Spinner } from 'react-bootstrap';
 import axios from 'axios';
+import './UserManagement.css';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -10,25 +11,22 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [centroIdFilter, setCentroIdFilter] = useState('');
-  const [centrosDisponiveis, setCentrosDisponiveis] = useState([]);
-
   const usersPerPage = 10;
 
   useEffect(() => {
-    fetchCentrosDisponiveis();
-    fetchUsers(currentPage);
-  }, [searchTerm, currentPage, centroIdFilter]);
+    if (!searchTerm && currentPage === 1) {
+      fetchUsers(1);
+    } else {
+      handleSearch();
+    }
+  }, [searchTerm, currentPage]);
 
   const fetchUsers = async (page) => {
     try {
       setLoading(true);
-      let url = `https://backend-ai2-proj.onrender.com/user/list?page=${page}&limit=${usersPerPage}`;
-
-      if (centroIdFilter) {
-        url += `&centroId=${centroIdFilter}`;
-      }
-
+      const url = searchTerm
+        ? `https://backend-ai2-proj.onrender.com/user/search?search=${searchTerm}&page=${page}&limit=${usersPerPage}`
+        : `https://backend-ai2-proj.onrender.com/user/list?page=${page}&limit=${usersPerPage}`;
       const response = await axios.get(url);
       if (searchTerm) {
         setSearchResults(response.data);
@@ -37,17 +35,20 @@ const UserManagement = () => {
       }
       setLoading(false);
     } catch (error) {
-      console.error('Erro ao buscar utilizadores', error);
+      console.error('Error fetching users', error);
       setLoading(false);
     }
   };
 
-  const fetchCentrosDisponiveis = async () => {
+  const handleSearch = async () => {
     try {
-      const response = await axios.get('https://backend-ai2-proj.onrender.com/centro/list');
-      setCentrosDisponiveis(response.data);
+      setLoading(true);
+      const response = await axios.get(`https://backend-ai2-proj.onrender.com/user/search?search=${searchTerm}&page=${currentPage}&limit=${usersPerPage}`);
+      setSearchResults(response.data);
+      setLoading(false);
     } catch (error) {
-      console.error('Erro ao buscar centros disponíveis', error);
+      console.error('Error searching users', error);
+      setLoading(false);
     }
   };
 
@@ -60,38 +61,15 @@ const UserManagement = () => {
 
   const handleSave = async () => {
     try {
-      const formData = new FormData();
-      formData.append('nome', currentUser.nome);
-      formData.append('email', currentUser.email);
-      formData.append('password', currentUser.password);
-      formData.append('centroId', currentUser.centroId);
-
       if (currentUser.id) {
-        formData.append('id', currentUser.id); // incluir ID para atualização
-      }
-      if (currentUser.foto) {
-        formData.append('foto', currentUser.foto); // incluir foto se presente
-      }
-
-      const config = {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      };
-
-      let url = 'https://backend-ai2-proj.onrender.com/user/';
-      if (currentUser.id) {
-        url += `update/${currentUser.id}`;
-        await axios.put(url, formData, config);
+        await axios.put(`https://backend-ai2-proj.onrender.com/user/update/${currentUser.id}`, currentUser);
       } else {
-        url += 'add';
-        await axios.post(url, formData, config);
+        await axios.post('https://backend-ai2-proj.onrender.com/user/add', currentUser);
       }
-
       setShow(false);
       fetchUsers(currentPage);
     } catch (error) {
-      console.error('Erro ao salvar utilizador', error);
+      console.error('Error saving user', error);
     }
   };
 
@@ -100,7 +78,7 @@ const UserManagement = () => {
       await axios.delete(`https://backend-ai2-proj.onrender.com/user/delete/${id}`);
       fetchUsers(currentPage);
     } catch (error) {
-      console.error('Erro ao apagar utilizador', error);
+      console.error('Error deleting user', error);
     }
   };
 
@@ -113,43 +91,8 @@ const UserManagement = () => {
     setCurrentPage(pageNumber);
   };
 
-  const handleSearch = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(
-        `https://backend-ai2-proj.onrender.com/user/find?search=${searchTerm}`
-      );
-      setSearchResults(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Erro ao buscar utilizadores', error);
-      setLoading(false);
-    }
-  };
-
-  const handleFilterByCentro = async (centroId) => {
-    try {
-      setCentroIdFilter(centroId);
-      setLoading(true);
-      const response = await axios.get(
-        `https://backend-ai2-proj.onrender.com/user/filterByCentro/${centroId}`
-      );
-      setUsers(response.data);
-      setLoading(false);
-    } catch (error) {
-      console.error('Erro ao filtrar utilizadores por centro', error);
-      setLoading(false);
-    }
-  };
-
-  const handleAddUser = () => {
-    setCurrentUser({});
-    setShow(true);
-  };
-
   const renderPagination = () => {
-    const dataToDisplay = searchTerm ? searchResults : users;
-    const totalUsers = dataToDisplay.length;
+    const totalUsers = searchTerm ? searchResults.length : users.length;
     const numPages = Math.ceil(totalUsers / usersPerPage);
 
     let items = [];
@@ -169,45 +112,29 @@ const UserManagement = () => {
 
   const renderTableData = () => {
     const dataToDisplay = searchTerm ? searchResults : users;
-
-    const indexOfLastUser = currentPage * usersPerPage;
-    const indexOfFirstUser = indexOfLastUser - usersPerPage;
-    const currentUsers = dataToDisplay.slice(indexOfFirstUser, indexOfLastUser);
+    const startIndex = (currentPage - 1) * usersPerPage;
+    const slicedUsers = dataToDisplay.slice(startIndex, startIndex + usersPerPage);
 
     return (
       <tbody>
-        {currentUsers.map((user) => (
+        {slicedUsers.map((user) => (
           <tr key={user.id}>
             <td>{user.id}</td>
             <td>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-              >
-                <div
-                  style={{
-                    overflow: 'hidden',
-                    height: '50px',
-                    width: '50px',
-                    borderRadius: '50%',
-                    marginRight: '10px'
-                  }}
-                >
-                  <img
-                    src={user.fotoUrl || 'https://via.placeholder.com/150'}
-                    alt="Foto do usuário"
-                    style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
-                  />
+              <div className="user-info">
+                <div className="user-avatar">
+                  <img src={user.fotoUrl || 'https://via.placeholder.com/150'} alt="User's Avatar" />
                 </div>
-                {user.nome}
+                <div className="user-details">
+                  <div>{user.nome}</div>
+                  <div className="user-email">{user.email}</div>
+                </div>
               </div>
             </td>
-            <td>{user.email}</td>
-            <td>{user.Centro ? user.Centro.centro : 'Centro não especificado'}</td>
+            <td>{user.Centro ? user.Centro.centro : '-'}</td>
+            <td className={user.Ativo ? '' : 'inactive-status'}>{user.Ativo ? 'Ativo' : 'Inativo'}</td>
             <td>
-              <Button variant="warning" onClick={() => handleShow(user)}>
+              <Button variant="warning" onClick={() => handleShow(user)} className="button-spacing">
                 Editar
               </Button>
               <Button
@@ -217,7 +144,7 @@ const UserManagement = () => {
                     handleDelete(user.id);
                   }
                 }}
-                className="ml-2"
+                className="button-spacing"
               >
                 Apagar
               </Button>
@@ -232,9 +159,6 @@ const UserManagement = () => {
     <div className="container mt-5">
       <h1>Gestão de Utilizadores</h1>
       <div className="mb-3">
-        <Button variant="success" onClick={handleAddUser}>
-          Adicionar Usuário
-        </Button>
         <Form>
           <Form.Control
             type="text"
@@ -244,18 +168,9 @@ const UserManagement = () => {
           />
         </Form>
       </div>
-      <Dropdown>
-        <Dropdown.Toggle variant="primary" id="dropdown-basic">
-          Filtrar por Centro
-        </Dropdown.Toggle>
-        <Dropdown.Menu>
-          {centrosDisponiveis.map((centro) => (
-            <Dropdown.Item key={centro.id} onClick={() => handleFilterByCentro(centro.id)}>
-              {centro.centro}
-            </Dropdown.Item>
-          ))}
-        </Dropdown.Menu>
-      </Dropdown>
+      <Button variant="primary" onClick={() => handleShow()}>
+        Adicionar Utilizador
+      </Button>
       {loading ? (
         <Spinner animation="border" role="status" className="ml-3">
           <span className="sr-only">Carregando...</span>
@@ -265,9 +180,9 @@ const UserManagement = () => {
           <thead>
             <tr>
               <th>ID</th>
-              <th>Nome</th>
-              <th>Email</th>
+              <th>Informações</th>
               <th>Centro</th>
+              <th>Status</th>
               <th>Ações</th>
             </tr>
           </thead>
@@ -280,62 +195,59 @@ const UserManagement = () => {
           <Modal.Title>{currentUser.id ? 'Editar Utilizador' : 'Adicionar Utilizador'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form.Group controlId="formNome">
-            <Form.Label>Nome</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Insira o nome"
-              value={currentUser.nome || ''}
-              onChange={(e) => setCurrentUser({ ...currentUser, nome: e.target.value })}
-            />
-          </Form.Group>
-          <Form.Group controlId="formEmail">
-            <Form.Label>Email</Form.Label>
-            <Form.Control
-              type="email"
-              placeholder="Insira o email"
-              value={currentUser.email || ''}
-              onChange={(e) => setCurrentUser({ ...currentUser, email: e.target.value })}
-            />
-          </Form.Group>
-          <Form.Group controlId="formCentro">
-            <Form.Label>Centro</Form.Label>
-            <Form.Control
-              as="select"
-              value={currentUser.centroId || ''}
-              onChange={(e) =>
-                setCurrentUser({ ...currentUser, centroId: parseInt(e.target.value) })
-              }
-            >
-              <option value="">Selecionar Centro</option>
-              {centrosDisponiveis.map((centro) => (
-                <option key={centro.id} value={centro.id}>
-                  {centro.centro}
-                </option>
-              ))}
-            </Form.Control>
-          </Form.Group>
-          <Form.Group controlId="formPassword">
-            <Form.Label>Senha</Form.Label>
-            <Form.Control
-              type="password"
-              placeholder="Insira a senha"
-              value={currentUser.password || ''}
-              onChange={(e) => setCurrentUser({ ...currentUser, password: e.target.value })}
-            />
-          </Form.Group>
-          <Form.Group controlId="formFoto">
-            <Form.Label>Foto</Form.Label>
-            <Form.Control
-              type="file"
-              accept="image/*"
-              onChange={(e) => setCurrentUser({ ...currentUser, foto: e.target.files[0] })}
-            />
-          </Form.Group>
+          <Form>
+            <Form.Group controlId="formNome">
+              <Form.Label>Nome</Form.Label>
+              <Form.Control
+                type="text"
+                name="nome"
+                value={currentUser.nome || ''}
+                onChange={(e) => setCurrentUser({ ...currentUser, nome: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group controlId="formEmail">
+              <Form.Label>Email</Form.Label>
+              <Form.Control
+                type="email"
+                name="email"
+                value={currentUser.email || ''}
+                onChange={(e) => setCurrentUser({ ...currentUser, email: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group controlId="formCentroId">
+              <Form.Label>Centro ID</Form.Label>
+              <Form.Control
+                type="number"
+                name="centroId"
+                value={currentUser.centroId || ''}
+                onChange={(e) => setCurrentUser({ ...currentUser, centroId: e.target.value })}
+              />
+            </Form.Group>
+            <Form.Group controlId="formStatus">
+              <Form.Label>Status</Form.Label>
+              <Form.Control
+                as="select"
+                value={currentUser.Ativo}
+                onChange={(e) => setCurrentUser({ ...currentUser, Ativo: e.target.value === 'true' })}
+              >
+                <option value={true}>Ativo</option>
+                <option value={false}>Inativo</option>
+              </Form.Control>
+            </Form.Group>
+            <Form.Group controlId="formNotas">
+              <Form.Label>Notas</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={currentUser.notas || ''}
+                onChange={(e) => setCurrentUser({ ...currentUser, notas: e.target.value })}
+              />
+            </Form.Group>
+          </Form>
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleClose}>
-            Fechar
+            Cancelar
           </Button>
           <Button variant="primary" onClick={handleSave}>
             Salvar
