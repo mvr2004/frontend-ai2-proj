@@ -19,8 +19,8 @@ const CriarCentros = () => {
   
     try {
       const response = await axios.post('https://backend-ai2-proj.onrender.com/centro/create', { centro, adminPassword });
-      setSuccessMessage(response.data.message);
-      //setTimeout(() => navigate('/list'), 2000); // Redirect to the list page after 2 seconds
+      setSuccessMessage(response.data.message + "! A ser redirecionado...");  
+      setTimeout(() => navigate('/centers'), 2000); // Redirect to the list page after 2 seconds
     } catch (error) {
       console.error('Erro ao criar o centro:', error);
       setErrorMessage(error.response?.data?.message || 'Erro ao criar o centro');
