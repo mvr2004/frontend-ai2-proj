@@ -163,7 +163,7 @@ const UserManagement = () => {
       </Button>
       {loading ? (
         <Spinner animation="border" role="status" className="ml-3">
-          <span className="sr-only">Carregando...</span>
+          <span className="visually-hidden">Carregando...</span>
         </Spinner>
       ) : (
         <Table striped bordered hover className="mt-3">
