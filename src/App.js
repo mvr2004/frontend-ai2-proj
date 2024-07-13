@@ -9,18 +9,15 @@ import Navigation from './components/Navigation';
 const App = () => {
   return (
     <Router>
+      <div>
+        <Navigation />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
-          
+          <Route path="/users" element={<UserManagement />} />
         </Routes>
-        <div>
-          <Navigation />
-          <Routes>
-            <Route path="/users" element={<UserManagement />} />
-          </Routes>
-        </div>
+      </div>
     </Router>
   );
 };
