@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Modal, Form, Pagination } from 'react-bootstrap';
+import { Table, Button, Modal, Form, Pagination, Spinner } from 'react-bootstrap';
 import axios from 'axios';
 
 const UserManagement = () => {
@@ -9,24 +9,33 @@ const UserManagement = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const usersPerPage = 10;
+  const [loading, setLoading] = useState(false); // Para indicar quando a busca está em progresso
+  const usersPerPage = 10; // Reduzi para 5 para facilitar a visualização, você pode ajustar conforme necessário
 
   useEffect(() => {
-    fetchUsers(currentPage);
-  }, [currentPage]);
-
-  useEffect(() => {
-    if (!searchTerm) {
-      fetchUsers(currentPage);
+    if (!searchTerm && currentPage === 1) {
+      fetchUsers(1); // Busca todos os usuários na página 1 se a barra de pesquisa estiver vazia
+    } else {
+      handleSearch(); // Executa a pesquisa quando há um searchTerm definido
     }
   }, [searchTerm, currentPage]); // Atualiza a pesquisa sempre que o searchTerm ou a página atual mudar
 
   const fetchUsers = async (page) => {
     try {
-      const response = await axios.get(`https://backend-ai2-proj.onrender.com/user/list?page=${page}&limit=${usersPerPage}`);
-      setUsers(response.data);
+      setLoading(true);
+      const url = searchTerm
+        ? `https://backend-ai2-proj.onrender.com/user/search?search=${searchTerm}&page=${page}&limit=${usersPerPage}`
+        : `https://backend-ai2-proj.onrender.com/user/list?page=${page}&limit=${usersPerPage}`;
+      const response = await axios.get(url);
+      if (searchTerm) {
+        setSearchResults(response.data);
+      } else {
+        setUsers(response.data);
+      }
+      setLoading(false);
     } catch (error) {
       console.error('Erro ao buscar utilizadores', error);
+      setLoading(false);
     }
   };
 
@@ -61,7 +70,8 @@ const UserManagement = () => {
   };
 
   const handleChange = (e) => {
-    setCurrentUser({ ...currentUser, [e.target.name]: e.target.value });
+    setSearchTerm(e.target.value);
+    setCurrentPage(1); // Reinicia para a primeira página ao alterar o termo de pesquisa
   };
 
   const handlePageChange = (pageNumber) => {
@@ -70,20 +80,16 @@ const UserManagement = () => {
 
   const handleSearch = async () => {
     try {
-      const response = await axios.get(`https://backend-ai2-proj.onrender.com/user/search?search=${searchTerm}`);
+      setLoading(true);
+      const response = await axios.get(
+        `https://backend-ai2-proj.onrender.com/user/search?search=${searchTerm}`
+      );
       setSearchResults(response.data);
+      setLoading(false);
     } catch (error) {
       console.error('Erro ao buscar utilizadores', error);
+      setLoading(false);
     }
-  };
-
-  const handleSearchInputChange = (e) => {
-    setSearchTerm(e.target.value);
-  };
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault(); // Previne o comportamento padrão do formulário (recarregar a página)
-    handleSearch();
   };
 
   const renderPagination = () => {
@@ -104,9 +110,14 @@ const UserManagement = () => {
   const renderTableData = () => {
     const dataToDisplay = searchTerm ? searchResults : users;
 
+    // Lógica para calcular os usuários que devem ser exibidos na página atual
+    const indexOfLastUser = currentPage * usersPerPage;
+    const indexOfFirstUser = indexOfLastUser - usersPerPage;
+    const currentUsers = dataToDisplay.slice(indexOfFirstUser, indexOfLastUser);
+
     return (
       <tbody>
-        {dataToDisplay.map((user) => (
+        {currentUsers.map((user) => (
           <tr key={user.id}>
             <td>{user.id}</td>
             <td>{user.nome}</td>
@@ -138,34 +149,38 @@ const UserManagement = () => {
     <div className="container mt-5">
       <h1>Gestão de Utilizadores</h1>
       <div className="mb-3">
-        <Form onSubmit={handleSearchSubmit}>
+        <Form>
           <Form.Control
             type="text"
             placeholder="Pesquisar por nome, email ou ID"
             value={searchTerm}
-            onChange={handleSearchInputChange}
+            onChange={handleChange}
           />
-          <Button variant="primary" type="submit" className="ml-2">
-            Pesquisar
-          </Button>
         </Form>
       </div>
       <Button variant="primary" onClick={() => handleShow()}>
         Adicionar Utilizador
       </Button>
-      <Table striped bordered hover className="mt-3">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Nome</th>
-            <th>Email</th>
-            <th>Centro ID</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        {renderTableData()}
-      </Table>
-      {renderPagination()} {/* Sempre passa os resultados corretos para renderizar a paginação */}
+      {loading ? (
+        <Spinner animation="border" role="status" className="ml-3">
+          <span className="sr-only">Carregando...</span>
+        </Spinner>
+      ) : (
+        <Table striped bordered hover className="mt-3">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Centro ID</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          {renderTableData()}
+        </Table>
+      )}
+      {renderPagination()}
+      {/* Sempre passa os resultados corretos para renderizar a paginação */}
       <Modal show={show} onHide={handleClose}>
         <Modal.Header closeButton>
           <Modal.Title>{currentUser.id ? 'Editar Utilizador' : 'Adicionar Utilizador'}</Modal.Title>
@@ -174,11 +189,21 @@ const UserManagement = () => {
           <Form>
             <Form.Group controlId="formNome">
               <Form.Label>Nome</Form.Label>
-              <Form.Control type="text" name="nome" value={currentUser.nome || ''} onChange={handleChange} />
+              <Form.Control
+                type="text"
+                name="nome"
+                value={currentUser.nome || ''}
+                onChange={(e) => setCurrentUser({ ...currentUser, nome: e.target.value })}
+              />
             </Form.Group>
             <Form.Group controlId="formEmail">
               <Form.Label>Email</Form.Label>
-              <Form.Control type="email" name="email" value={currentUser.email || ''} onChange={handleChange} />
+              <Form.Control
+                type="email"
+                name="email"
+                value={currentUser.email || ''}
+                onChange={(e) => setCurrentUser({ ...currentUser, email: e.target.value })}
+              />
             </Form.Group>
             <Form.Group controlId="formCentroId">
               <Form.Label>Centro ID</Form.Label>
@@ -186,7 +211,7 @@ const UserManagement = () => {
                 type="number"
                 name="centroId"
                 value={currentUser.centroId || ''}
-                onChange={handleChange}
+                onChange={(e) => setCurrentUser({ ...currentUser, centroId: e.target.value })}
               />
             </Form.Group>
           </Form>
