@@ -103,7 +103,7 @@ const ReportsList = ({ resolvido }) => {
               <td>{report.assunto}</td>
               <td>{report.User.nome}</td>
               <td>
-                <Button variant="primary" as={Link} to={`/reports/${report.id}`}>
+                <Button variant="primary"  as={Link} to={`/reports/${report.id}`}>
                   Ver Mais
                 </Button>
                 <Button 

@@ -8,6 +8,7 @@ const Dashboard = () => {
     return(
         <div>
             Pagina dashboard
+            <br></br>
         </div>
     )
 }
