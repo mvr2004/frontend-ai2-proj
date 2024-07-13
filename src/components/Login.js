@@ -13,6 +13,7 @@ const Login = () => {
         try {
             const response = await axios.post('https://backend-ai2-proj.onrender.com/admin/login', { nome, password });
             localStorage.setItem('token', response.data.token);
+            localStorage.setItem('idCentro', response.data.idCentro); //guarda o ID do centro
             navigate('/dashboard'); // Redireciona para o dashboard após login bem-sucedido
         } catch (error) {
             setError('Nome ou palavra-passe inválidos');
