@@ -11,11 +11,13 @@ const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [centrosDisponiveis, setCentrosDisponiveis] = useState([]);
   const usersPerPage = 10;
 
   useEffect(() => {
     if (!searchTerm && currentPage === 1) {
       fetchUsers(1);
+      fetchCentros();
     } else {
       handleSearch();
     }
@@ -40,6 +42,15 @@ const UserManagement = () => {
     }
   };
 
+  const fetchCentros = async () => {
+    try {
+      const response = await axios.get('https://backend-ai2-proj.onrender.com/centro/list');
+      setCentrosDisponiveis(response.data);
+    } catch (error) {
+      console.error('Error fetching centers', error);
+    }
+  };
+
   const handleSearch = async () => {
     try {
       setLoading(true);
@@ -61,10 +72,23 @@ const UserManagement = () => {
 
   const handleSave = async () => {
     try {
-      if (currentUser.id) {
-        await axios.put(`https://backend-ai2-proj.onrender.com/user/update/${currentUser.id}`, currentUser);
+      const { id, nome, email, password, centroId, Ativo, notas } = currentUser;
+
+      // Definindo Ativo como booleano explícito
+      const userToSave = {
+        id,
+        nome,
+        email,
+        password,
+        centroId,
+        Ativo: Ativo || false, // Garantindo que seja enviado como booleano explícito para o backend
+        notas
+      };
+
+      if (id) {
+        await axios.put(`https://backend-ai2-proj.onrender.com/user/update/${id}`, userToSave);
       } else {
-        await axios.post('https://backend-ai2-proj.onrender.com/user/add', currentUser);
+        await axios.post('https://backend-ai2-proj.onrender.com/user/add', userToSave);
       }
       setShow(false);
       fetchUsers(currentPage);
@@ -168,28 +192,33 @@ const UserManagement = () => {
           />
         </Form>
       </div>
-      <Button variant="primary" onClick={() => handleShow()}>
-        Adicionar Utilizador
+      <Button variant="primary" onClick={() => handleShow()} className="mb-3">
+        Adicionar Novo Utilizador
       </Button>
-      {loading ? (
-        <Spinner animation="border" role="status" className="ml-3">
-          <span className="sr-only">Carregando...</span>
-        </Spinner>
-      ) : (
-        <Table striped bordered hover className="mt-3">
-          <thead>
+      <Table striped bordered hover>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Nome</th>
+            <th>Centro</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        {loading ? (
+          <tbody>
             <tr>
-              <th>ID</th>
-              <th>Informações</th>
-              <th>Centro</th>
-              <th>Status</th>
-              <th>Ações</th>
+              <td colSpan="5" className="text-center">
+                <Spinner animation="border" />
+              </td>
             </tr>
-          </thead>
-          {renderTableData()}
-        </Table>
-      )}
+          </tbody>
+        ) : (
+          renderTableData()
+        )}
+      </Table>
       {renderPagination()}
+
       <Modal show={show} onHide={handleClose}>
         <Modal.Header closeButton>
           <Modal.Title>{currentUser.id ? 'Editar Utilizador' : 'Adicionar Utilizador'}</Modal.Title>
@@ -200,7 +229,6 @@ const UserManagement = () => {
               <Form.Label>Nome</Form.Label>
               <Form.Control
                 type="text"
-                name="nome"
                 value={currentUser.nome || ''}
                 onChange={(e) => setCurrentUser({ ...currentUser, nome: e.target.value })}
               />
@@ -209,30 +237,40 @@ const UserManagement = () => {
               <Form.Label>Email</Form.Label>
               <Form.Control
                 type="email"
-                name="email"
                 value={currentUser.email || ''}
                 onChange={(e) => setCurrentUser({ ...currentUser, email: e.target.value })}
               />
             </Form.Group>
-            <Form.Group controlId="formCentroId">
-              <Form.Label>Centro ID</Form.Label>
+            <Form.Group controlId="formPassword">
+              <Form.Label>Password</Form.Label>
               <Form.Control
-                type="number"
-                name="centroId"
-                value={currentUser.centroId || ''}
-                onChange={(e) => setCurrentUser({ ...currentUser, centroId: e.target.value })}
+                type="password"
+                placeholder="Digite uma nova senha (opcional)"
+                onChange={(e) => setCurrentUser({ ...currentUser, password: e.target.value })}
               />
             </Form.Group>
-            <Form.Group controlId="formStatus">
-              <Form.Label>Status</Form.Label>
+            <Form.Group controlId="formCentro">
+              <Form.Label>Centro</Form.Label>
               <Form.Control
                 as="select"
-                value={currentUser.Ativo}
-                onChange={(e) => setCurrentUser({ ...currentUser, Ativo: e.target.value === 'true' })}
+                value={currentUser.centroId || ''}
+                onChange={(e) => setCurrentUser({ ...currentUser, centroId: e.target.value })}
               >
-                <option value={true}>Ativo</option>
-                <option value={false}>Inativo</option>
+                <option value="">Selecione um centro</option>
+                {centrosDisponiveis.map((centro) => (
+                  <option key={centro.id} value={centro.id}>
+                    {centro.centro}
+                  </option>
+                ))}
               </Form.Control>
+            </Form.Group>
+            <Form.Group controlId="formAtivo">
+              <Form.Check
+                type="checkbox"
+                label="Ativo"
+                checked={currentUser.Ativo || false}
+                onChange={(e) => setCurrentUser({ ...currentUser, Ativo: e.target.checked })}
+              />
             </Form.Group>
             <Form.Group controlId="formNotas">
               <Form.Label>Notas</Form.Label>
