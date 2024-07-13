@@ -17,8 +17,9 @@ const UserManagement = () => {
   const fetchUsers = async () => {
     try {
       const response = await axios.get(`https://backend-ai2-proj.onrender.com/user/list?page=${currentPage}&limit=${usersPerPage}`);
-      setUsers(response.data.users);
-      setTotalPages(response.data.totalPages);
+      console.log('Response data:', response.data);
+      setUsers(response.data || []);
+      setTotalPages(Math.ceil(response.data.length / usersPerPage));
     } catch (error) {
       console.error('Erro ao buscar utilizadores', error);
     }
@@ -74,6 +75,8 @@ const UserManagement = () => {
     return <Pagination>{items}</Pagination>;
   };
 
+  console.log('Users:', users);
+
   return (
     <div className="container mt-5">
       <h1>Gestão de Utilizadores</h1>
@@ -89,7 +92,7 @@ const UserManagement = () => {
           </tr>
         </thead>
         <tbody>
-          {users.map(user => (
+          {users.map((user, index) => (
             <tr key={user.id}>
               <td>{user.id}</td>
               <td>{user.nome}</td>
