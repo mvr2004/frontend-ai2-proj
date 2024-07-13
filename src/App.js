@@ -6,6 +6,7 @@ import DashboardPage from './pages/DashboardPage';
 import UserManagement from './views/listar_User';
 import Navigation from './components/Navigation';
 import ReportsList from './views/listar_Reports';
+import VerReport from './views/ver_Report';
 
 const App = () => {
   return (
@@ -19,6 +20,7 @@ const App = () => {
           <Route path="/users" element={<UserManagement />} />
           <Route path="/reportsPorResolver" element={<ReportsList resolvido={false} />} />
           <Route path="/reportsResolvidos" element={<ReportsList resolvido={true} />} />
+          <Route path="/reports/:id" element={<VerReport />} /> 
         </Routes>
       </div>
     </Router>
