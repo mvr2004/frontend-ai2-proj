@@ -17,11 +17,7 @@ const UserManagement = () => {
 
   useEffect(() => {
     fetchCentrosDisponiveis();
-    if (!searchTerm && currentPage === 1) {
-      fetchUsers(1);
-    } else {
-      handleSearch();
-    }
+    fetchUsers(currentPage);
   }, [searchTerm, currentPage, centroIdFilter]);
 
   const fetchUsers = async (page) => {
@@ -64,11 +60,34 @@ const UserManagement = () => {
 
   const handleSave = async () => {
     try {
+      const formData = new FormData();
+      formData.append('nome', currentUser.nome);
+      formData.append('email', currentUser.email);
+      formData.append('password', currentUser.password);
+      formData.append('centroId', currentUser.centroId);
+
       if (currentUser.id) {
-        await axios.put(`https://backend-ai2-proj.onrender.com/user/update/${currentUser.id}`, currentUser);
-      } else {
-        await axios.post('https://backend-ai2-proj.onrender.com/user/add', currentUser);
+        formData.append('id', currentUser.id); // incluir ID para atualização
       }
+      if (currentUser.foto) {
+        formData.append('foto', currentUser.foto); // incluir foto se presente
+      }
+
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      };
+
+      let url = 'https://backend-ai2-proj.onrender.com/user/';
+      if (currentUser.id) {
+        url += `update/${currentUser.id}`;
+        await axios.put(url, formData, config);
+      } else {
+        url += 'add';
+        await axios.post(url, formData, config);
+      }
+
       setShow(false);
       fetchUsers(currentPage);
     } catch (error) {
@@ -123,6 +142,11 @@ const UserManagement = () => {
     }
   };
 
+  const handleAddUser = () => {
+    setCurrentUser({});
+    setShow(true);
+  };
+
   const renderPagination = () => {
     const dataToDisplay = searchTerm ? searchResults : users;
     const totalUsers = dataToDisplay.length;
@@ -131,7 +155,11 @@ const UserManagement = () => {
     let items = [];
     for (let number = 1; number <= numPages; number++) {
       items.push(
-        <Pagination.Item key={number} active={number === currentPage} onClick={() => handlePageChange(number)}>
+        <Pagination.Item
+          key={number}
+          active={number === currentPage}
+          onClick={() => handlePageChange(number)}
+        >
           {number}
         </Pagination.Item>
       );
@@ -152,8 +180,21 @@ const UserManagement = () => {
           <tr key={user.id}>
             <td>{user.id}</td>
             <td>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ overflow: 'hidden', height: '50px', width: '50px', borderRadius: '50%', marginRight: '10px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                <div
+                  style={{
+                    overflow: 'hidden',
+                    height: '50px',
+                    width: '50px',
+                    borderRadius: '50%',
+                    marginRight: '10px'
+                  }}
+                >
                   <img
                     src={user.fotoUrl || 'https://via.placeholder.com/150'}
                     alt="Foto do usuário"
@@ -164,7 +205,7 @@ const UserManagement = () => {
               </div>
             </td>
             <td>{user.email}</td>
-            <td>{user.Centro ? user.Centro.centro : ''}</td>
+            <td>{user.Centro ? user.Centro.centro : 'Centro não especificado'}</td>
             <td>
               <Button variant="warning" onClick={() => handleShow(user)}>
                 Editar
@@ -191,6 +232,9 @@ const UserManagement = () => {
     <div className="container mt-5">
       <h1>Gestão de Utilizadores</h1>
       <div className="mb-3">
+        <Button variant="success" onClick={handleAddUser}>
+          Adicionar Usuário
+        </Button>
         <Form>
           <Form.Control
             type="text"
@@ -233,7 +277,7 @@ const UserManagement = () => {
       {renderPagination()}
       <Modal show={show} onHide={handleClose}>
         <Modal.Header closeButton>
-          <Modal.Title>Editar Utilizador</Modal.Title>
+          <Modal.Title>{currentUser.id ? 'Editar Utilizador' : 'Adicionar Utilizador'}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form.Group controlId="formNome">
@@ -252,6 +296,40 @@ const UserManagement = () => {
               placeholder="Insira o email"
               value={currentUser.email || ''}
               onChange={(e) => setCurrentUser({ ...currentUser, email: e.target.value })}
+            />
+          </Form.Group>
+          <Form.Group controlId="formCentro">
+            <Form.Label>Centro</Form.Label>
+            <Form.Control
+              as="select"
+              value={currentUser.centroId || ''}
+              onChange={(e) =>
+                setCurrentUser({ ...currentUser, centroId: parseInt(e.target.value) })
+              }
+            >
+              <option value="">Selecionar Centro</option>
+              {centrosDisponiveis.map((centro) => (
+                <option key={centro.id} value={centro.id}>
+                  {centro.centro}
+                </option>
+              ))}
+            </Form.Control>
+          </Form.Group>
+          <Form.Group controlId="formPassword">
+            <Form.Label>Senha</Form.Label>
+            <Form.Control
+              type="password"
+              placeholder="Insira a senha"
+              value={currentUser.password || ''}
+              onChange={(e) => setCurrentUser({ ...currentUser, password: e.target.value })}
+            />
+          </Form.Group>
+          <Form.Group controlId="formFoto">
+            <Form.Label>Foto</Form.Label>
+            <Form.Control
+              type="file"
+              accept="image/*"
+              onChange={(e) => setCurrentUser({ ...currentUser, foto: e.target.files[0] })}
             />
           </Form.Group>
         </Modal.Body>
