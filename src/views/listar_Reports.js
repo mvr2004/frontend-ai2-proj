@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Spinner, Button, Pagination } from 'react-bootstrap';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 
 const ReportsList = ({ resolvido }) => {
   const [reports, setReports] = useState([]);
@@ -10,20 +11,40 @@ const ReportsList = ({ resolvido }) => {
   const [reportsPerPage] = useState(10);
 
   useEffect(() => {
-    const fetchReports = async () => {
-      try {
-        const response = await axios.get('https://backend-ai2-proj.onrender.com/report/reports');
-        setReports(response.data);
-      } catch (error) {
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchReports();
   }, []);
 
+  //Vai buscar todos os importes
+  const fetchReports = async () => {
+    try {
+      const response = await axios.get('https://backend-ai2-proj.onrender.com/report/reports');
+      setReports(response.data);
+      setLoading(false);
+    } catch (error) {
+      setError(error.message);
+      setLoading(false);
+    }
+  };
+
+  //Atualizar estado do reporte
+  const handleResolve = async (id, currentStatus) => {
+    try {
+      const response = await axios.put(`https://backend-ai2-proj.onrender.com/report/update/${id}`, {
+        resolvido: !currentStatus
+      });
+      if (response.data.success) {
+        // Update the local state to reflect the change
+        setReports(reports.map(report => 
+          report.id === id ? { ...report, resolvido: !currentStatus } : report
+        ));
+      } else {
+        setError(response.data.message);
+      }
+    } catch (error) {
+      setError('Erro ao atualizar o status do report');
+    }
+  };
+  
   if (loading) {
     return (
       <div className="text-center mt-5">
@@ -40,12 +61,10 @@ const ReportsList = ({ resolvido }) => {
   
   const reportesFiltrados = reports.filter(report => report.resolvido === resolvido);
 
-  //Receber os reportes atuais
   const indexOfLastReport = currentPage * reportsPerPage;
   const indexOfFirstReport = indexOfLastReport - reportsPerPage;
   const currentReports = reportesFiltrados.slice(indexOfFirstReport, indexOfLastReport);
 
-  //Mudar página
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   const renderPagination = () => {
@@ -84,18 +103,16 @@ const ReportsList = ({ resolvido }) => {
               <td>{report.assunto}</td>
               <td>{report.User.nome}</td>
               <td>
-                <Button variant="primary">
+                <Button variant="primary" as={Link} to={`/reports/${report.id}`}>
                   Ver Mais
                 </Button>
-                {report.resolvido ? (
-                  <Button variant="success" className="ms-3" disabled>
-                    Resolvido
-                  </Button>
-                ) : (
-                  <Button variant="warning" className="ms-3">
-                    Resolver
-                  </Button>
-                )}
+                <Button 
+                  variant={report.resolvido ? "success" : "warning"}
+                  className="ms-3"
+                  onClick={() => handleResolve(report.id, report.resolvido)}
+                >
+                  {report.resolvido ? 'Marcar Pendente' : 'Resolver'}
+                </Button>
               </td>
             </tr>
           ))}
