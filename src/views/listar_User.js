@@ -7,19 +7,24 @@ const UserManagement = () => {
   const [show, setShow] = useState(false);
   const [currentUser, setCurrentUser] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
   const usersPerPage = 10;
 
   useEffect(() => {
-    fetchUsers();
+    fetchUsers(currentPage);
   }, [currentPage]);
 
-  const fetchUsers = async () => {
+  useEffect(() => {
+    if (!searchTerm) {
+      fetchUsers(currentPage);
+    }
+  }, [searchTerm, currentPage]); // Atualiza a pesquisa sempre que o searchTerm ou a página atual mudar
+
+  const fetchUsers = async (page) => {
     try {
-      const response = await axios.get(`https://backend-ai2-proj.onrender.com/user/list?page=${currentPage}&limit=${usersPerPage}`);
-      console.log('Response data:', response.data);
-      setUsers(response.data || []);
-      setTotalPages(Math.ceil(response.data.length / usersPerPage));
+      const response = await axios.get(`https://backend-ai2-proj.onrender.com/user/list?page=${page}&limit=${usersPerPage}`);
+      setUsers(response.data);
     } catch (error) {
       console.error('Erro ao buscar utilizadores', error);
     }
@@ -40,7 +45,7 @@ const UserManagement = () => {
         await axios.post('https://backend-ai2-proj.onrender.com/user/add', currentUser);
       }
       setShow(false);
-      fetchUsers();
+      fetchUsers(currentPage); // Sempre recarrega os usuários após salvar
     } catch (error) {
       console.error('Erro ao salvar utilizador', error);
     }
@@ -49,7 +54,7 @@ const UserManagement = () => {
   const handleDelete = async (id) => {
     try {
       await axios.delete(`https://backend-ai2-proj.onrender.com/user/delete/${id}`);
-      fetchUsers();
+      fetchUsers(currentPage); // Sempre recarrega os usuários após deletar
     } catch (error) {
       console.error('Erro ao apagar utilizador', error);
     }
@@ -63,9 +68,30 @@ const UserManagement = () => {
     setCurrentPage(pageNumber);
   };
 
+  const handleSearch = async () => {
+    try {
+      const response = await axios.get(`https://backend-ai2-proj.onrender.com/user/search?search=${searchTerm}`);
+      setSearchResults(response.data);
+    } catch (error) {
+      console.error('Erro ao buscar utilizadores', error);
+    }
+  };
+
+  const handleSearchInputChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault(); // Previne o comportamento padrão do formulário (recarregar a página)
+    handleSearch();
+  };
+
   const renderPagination = () => {
+    const totalUsers = searchTerm ? searchResults.length : users.length; // Determina o total de usuários a serem paginados
+    const numPages = Math.ceil(totalUsers / usersPerPage);
+
     let items = [];
-    for (let number = 1; number <= totalPages; number++) {
+    for (let number = 1; number <= numPages; number++) {
       items.push(
         <Pagination.Item key={number} active={number === currentPage} onClick={() => handlePageChange(number)}>
           {number}
@@ -75,12 +101,58 @@ const UserManagement = () => {
     return <Pagination>{items}</Pagination>;
   };
 
-  console.log('Users:', users);
+  const renderTableData = () => {
+    const dataToDisplay = searchTerm ? searchResults : users;
+
+    return (
+      <tbody>
+        {dataToDisplay.map((user) => (
+          <tr key={user.id}>
+            <td>{user.id}</td>
+            <td>{user.nome}</td>
+            <td>{user.email}</td>
+            <td>{user.centroId}</td>
+            <td>
+              <Button variant="warning" onClick={() => handleShow(user)}>
+                Editar
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  if (window.confirm('Tem certeza que deseja apagar este utilizador?')) {
+                    handleDelete(user.id);
+                  }
+                }}
+                className="ml-2"
+              >
+                Apagar
+              </Button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    );
+  };
 
   return (
     <div className="container mt-5">
       <h1>Gestão de Utilizadores</h1>
-      <Button variant="primary" onClick={() => handleShow()}>Adicionar Utilizador</Button>
+      <div className="mb-3">
+        <Form onSubmit={handleSearchSubmit}>
+          <Form.Control
+            type="text"
+            placeholder="Pesquisar por nome, email ou ID"
+            value={searchTerm}
+            onChange={handleSearchInputChange}
+          />
+          <Button variant="primary" type="submit" className="ml-2">
+            Pesquisar
+          </Button>
+        </Form>
+      </div>
+      <Button variant="primary" onClick={() => handleShow()}>
+        Adicionar Utilizador
+      </Button>
       <Table striped bordered hover className="mt-3">
         <thead>
           <tr>
@@ -91,22 +163,9 @@ const UserManagement = () => {
             <th>Ações</th>
           </tr>
         </thead>
-        <tbody>
-          {users.map((user, index) => (
-            <tr key={user.id}>
-              <td>{user.id}</td>
-              <td>{user.nome}</td>
-              <td>{user.email}</td>
-              <td>{user.centroId}</td>
-              <td>
-                <Button variant="warning" onClick={() => handleShow(user)}>Editar</Button>
-                <Button variant="danger" onClick={() => handleDelete(user.id)} className="ml-2">Apagar</Button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
+        {renderTableData()}
       </Table>
-      {renderPagination()}
+      {renderPagination()} {/* Sempre passa os resultados corretos para renderizar a paginação */}
       <Modal show={show} onHide={handleClose}>
         <Modal.Header closeButton>
           <Modal.Title>{currentUser.id ? 'Editar Utilizador' : 'Adicionar Utilizador'}</Modal.Title>
@@ -123,17 +182,22 @@ const UserManagement = () => {
             </Form.Group>
             <Form.Group controlId="formCentroId">
               <Form.Label>Centro ID</Form.Label>
-              <Form.Control type="number" name="centroId" value={currentUser.centroId || ''} onChange={handleChange} />
-            </Form.Group>
-            <Form.Group controlId="formPassword">
-              <Form.Label>Password</Form.Label>
-              <Form.Control type="password" name="password" value={currentUser.password || ''} onChange={handleChange} />
+              <Form.Control
+                type="number"
+                name="centroId"
+                value={currentUser.centroId || ''}
+                onChange={handleChange}
+              />
             </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose}>Fechar</Button>
-          <Button variant="primary" onClick={handleSave}>Salvar</Button>
+          <Button variant="secondary" onClick={handleClose}>
+            Fechar
+          </Button>
+          <Button variant="primary" onClick={handleSave}>
+            Salvar
+          </Button>
         </Modal.Footer>
       </Modal>
     </div>
