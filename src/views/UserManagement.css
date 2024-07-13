@@ -1,0 +1,39 @@
+.user-info {
+  display: flex;
+  align-items: center;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  overflow: hidden;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.user-avatar img {
+  width: 100%;
+  height: auto;
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-email {
+  font-size: 0.85rem; /* Tamanho menor para o email */
+}
+
+
+.inactive-status {
+  color: red !important;  /* Define a cor vermelha para o texto "Inativo" */
+  font-weight: bold; /* Texto em negrito */
+}
+
+/* UserManagement.css */
+.button-spacing {
+  margin-right: 5px; /* Espaçamento de 10px entre os botões */
+}
+
+
