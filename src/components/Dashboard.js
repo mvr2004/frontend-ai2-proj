@@ -7,7 +7,6 @@ const Dashboard = () => {
 
     return(
         <div>
-            <Navigation />
             Pagina dashboard
         </div>
     )
